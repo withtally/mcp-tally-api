@@ -72,16 +72,25 @@ export interface UserDAOParticipation {
   };
   token: {
     symbol: string;
+    name?: string;
+    decimals?: number;
   };
   votes: string;
+  conversionNote?: string;
 }
 
 export interface DAOParticipant {
   id: string;
   delegatorsCount: number;
+  votesCount?: string;
   account: {
     address: string;
     name: string;
+  };
+  tokenInfo?: {
+    symbol: string;
+    name: string;
+    decimals: number;
   };
 }
 
@@ -101,6 +110,12 @@ export interface UserDelegateParticipation {
   statement?: DelegateStatement;
   votesCount: string;
   delegatorsCount: number;
+  tokenInfo?: {
+    symbol: string;
+    name: string;
+    decimals: number;
+  };
+  conversionNote?: string;
 }
 
 export interface UserDetails {
@@ -112,6 +127,7 @@ export interface UserDetails {
   ens?: string;
   picture?: string;
   delegateParticipations: UserDelegateParticipation[];
+  conversionReminder?: string;
 }
 
 export interface DelegateInfo {
@@ -144,7 +160,9 @@ export interface DelegateInfo {
     id: string;
     symbol: string;
     name: string;
+    decimals?: number;
   };
+  conversionNote?: string;
 }
 
 export interface PaginationInfo {
@@ -158,12 +176,14 @@ export interface PaginatedDAOParticipants {
   items: DAOParticipant[];
   totalCount: number;
   pageInfo: PaginationInfo;
+  conversionReminder?: string;
 }
 
 export interface PaginatedDelegates {
   items: DelegateInfo[];
   totalCount: number;
   pageInfo: PaginationInfo;
+  conversionReminder?: string;
 }
 
 export interface UserProfile {
@@ -176,6 +196,7 @@ export interface UserProfile {
   picture?: string;
   daoParticipations: UserDAOParticipation[];
   delegateParticipations: UserDelegateParticipation[];
+  conversionReminder?: string;
 }
 
 export interface DelegateStatementResult {
@@ -265,6 +286,8 @@ export async function getUserDAOs(
             }
             token {
               symbol
+              name
+              decimals
             }
             votes
           }
@@ -287,7 +310,13 @@ export async function getUserDAOs(
       return [];
     }
 
-    return result.delegatees.nodes;
+    // Add conversion notes to each participation
+    return result.delegatees.nodes.map((delegation: any) => ({
+      ...delegation,
+      conversionNote: delegation.token?.decimals 
+        ? `⚠️ Raw value: ${delegation.votes} units. Human-readable: ${delegation.votes ? (BigInt(delegation.votes) / BigInt(10 ** delegation.token.decimals)).toString() : '0'} ${delegation.token.symbol}`
+        : `⚠️ Raw value: ${delegation.votes} units. Divide by 10^18 (default) to get human-readable ${delegation.token.symbol} amount`,
+    }));
   } catch (error: any) {
     if (error.response?.status === 422) {
       throw new ValidationError(`Invalid query structure: ${error.response.errors?.[0]?.message || 'Unknown GraphQL error'}`);
@@ -331,6 +360,12 @@ export async function getDAOParticipants(
               address
               name
             }
+            token {
+              id
+              symbol
+              name
+              decimals
+            }
           }
         }
         pageInfo {
@@ -351,9 +386,21 @@ export async function getDAOParticipants(
       return null;
     }
 
-    // Transform to expected structure
+    // Transform to expected structure with conversion notes
+    const items = result.delegates.nodes.map((delegate: any) => ({
+      id: delegate.id,
+      delegatorsCount: delegate.delegatorsCount,
+      votesCount: delegate.votesCount,
+      account: delegate.account,
+      tokenInfo: delegate.token ? {
+        symbol: delegate.token.symbol,
+        name: delegate.token.name,
+        decimals: delegate.token.decimals || 18,
+      } : undefined,
+    }));
+
     return {
-      items: result.delegates.nodes || [],
+      items,
       totalCount: result.delegates.pageInfo?.count || 0,
       pageInfo: {
         hasNextPage: false, // Would need additional logic to determine this
@@ -361,6 +408,7 @@ export async function getDAOParticipants(
         startCursor: result.delegates.pageInfo?.firstCursor,
         endCursor: result.delegates.pageInfo?.lastCursor,
       },
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (typically 18 for most governance tokens). Use tokenInfo.decimals when available.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -418,6 +466,12 @@ export async function getUserDetails(
             }
             votesCount
             delegatorsCount
+            token {
+              id
+              symbol
+              name
+              decimals
+            }
           }
         }
       }
@@ -433,7 +487,7 @@ export async function getUserDetails(
       return null;
     }
 
-    // Transform delegate participations
+    // Transform delegate participations with token info and conversion notes
     const delegateParticipations: UserDelegateParticipation[] = (result.delegates?.nodes || []).map((delegate: any) => ({
       id: delegate.id,
       organization: delegate.organization,
@@ -442,11 +496,20 @@ export async function getUserDetails(
         : undefined,
       votesCount: delegate.votesCount,
       delegatorsCount: delegate.delegatorsCount,
+      tokenInfo: delegate.token ? {
+        symbol: delegate.token.symbol,
+        name: delegate.token.name,
+        decimals: delegate.token.decimals || 18,
+      } : undefined,
+      conversionNote: delegate.token?.decimals 
+        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
+        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable amount`,
     }));
 
     return {
       ...result.accountV2,
       delegateParticipations,
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values in delegate participations are in raw token units. Check individual conversionNote fields or use tokenInfo.decimals to convert to human-readable amounts.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -513,6 +576,7 @@ export async function getDelegates(
               id
               symbol
               name
+              decimals
             }
           }
         }
@@ -539,9 +603,20 @@ export async function getDelegates(
       return null;
     }
 
-    // Transform to expected structure
+    // Transform to expected structure with conversion notes
+    const items = result.delegates.nodes.map((delegate: any) => ({
+      ...delegate,
+      token: {
+        ...delegate.token,
+        decimals: delegate.token?.decimals || 18,
+      },
+      conversionNote: delegate.token?.decimals 
+        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
+        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable ${delegate.token?.symbol || 'tokens'}`,
+    }));
+
     return {
-      items: result.delegates.nodes || [],
+      items,
       totalCount: result.delegates.pageInfo?.count || 0,
       pageInfo: {
         hasNextPage: false, // Would need additional logic to determine this
@@ -549,6 +624,7 @@ export async function getDelegates(
         startCursor: result.delegates.pageInfo?.firstCursor,
         endCursor: result.delegates.pageInfo?.lastCursor,
       },
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (check token.decimals field or use 18 as default). Individual conversionNote fields show calculated examples.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -603,6 +679,8 @@ export async function getUserProfile(
             }
             token {
               symbol
+              name
+              decimals
             }
             votes
           }
@@ -626,6 +704,12 @@ export async function getUserProfile(
             }
             votesCount
             delegatorsCount
+            token {
+              id
+              symbol
+              name
+              decimals
+            }
           }
         }
       }
@@ -641,15 +725,22 @@ export async function getUserProfile(
       return null;
     }
 
-    // Transform DAO participations
+    // Transform DAO participations with conversion notes
     const daoParticipations: UserDAOParticipation[] = (result.delegatees?.nodes || []).map((delegation: any) => ({
       id: delegation.id,
       organization: delegation.organization,
-      token: delegation.token,
+      token: {
+        symbol: delegation.token.symbol,
+        name: delegation.token.name,
+        decimals: delegation.token.decimals,
+      },
       votes: delegation.votes,
+      conversionNote: delegation.token?.decimals 
+        ? `⚠️ Delegation: ${delegation.votes} raw units = ${delegation.votes ? (BigInt(delegation.votes) / BigInt(10 ** delegation.token.decimals)).toString() : '0'} ${delegation.token.symbol}`
+        : `⚠️ Delegation: ${delegation.votes} raw units. Divide by 10^18 (default) for human-readable ${delegation.token.symbol} amount`,
     }));
 
-    // Transform delegate participations
+    // Transform delegate participations with conversion notes
     const delegateParticipations: UserDelegateParticipation[] = (result.delegates?.nodes || []).map((delegate: any) => ({
       id: delegate.id,
       organization: delegate.organization,
@@ -658,12 +749,21 @@ export async function getUserProfile(
         : undefined,
       votesCount: delegate.votesCount,
       delegatorsCount: delegate.delegatorsCount,
+      tokenInfo: delegate.token ? {
+        symbol: delegate.token.symbol,
+        name: delegate.token.name,
+        decimals: delegate.token.decimals || 18,
+      } : undefined,
+      conversionNote: delegate.token?.decimals 
+        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
+        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable amount`,
     }));
 
     return {
       ...result.accountV2,
       daoParticipations,
       delegateParticipations,
+      conversionReminder: "⚠️ IMPORTANT: All vote counts and delegation amounts are in raw token units. Check individual conversionNote fields or use token decimals to convert to human-readable amounts. DAO participations show delegated amounts, delegate participations show voting power.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
