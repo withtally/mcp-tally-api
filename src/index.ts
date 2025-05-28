@@ -254,7 +254,7 @@ class TallyMcpServer {
             github: result.github,
             timelocks: result.timelocks, // Include timelock information
             safes: result.safes, // Include safe addresses
-            conversionReminder: "⚠️ IMPORTANT: When analyzing proposals or votes for this organization, remember that all vote counts and token amounts are in raw token units. Check the tokenInfo.decimals in timelock data or use 18 decimals as default for most governance tokens to convert to human-readable amounts.",
+            conversionReminder: "⚠️ IMPORTANT: When analyzing proposals or votes for this organization, all vote counts and token amounts are in raw token units (Ethereum-style). Use tokenInfo.decimals to convert: human-readable amount = raw value ÷ 10^decimals.",
           };
 
           return {
@@ -438,7 +438,7 @@ class TallyMcpServer {
               startCursor: undefined,
               endCursor: undefined,
             },
-            conversionReminder: "⚠️ IMPORTANT: All vote counts in votingStats (yesVotes, noVotes, abstainVotes) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
+            conversionReminder: "⚠️ IMPORTANT: All vote counts in votingStats (yesVotes, noVotes, abstainVotes) are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -530,7 +530,7 @@ class TallyMcpServer {
             timelockOperations: result.timelockOperations, // Include timelock analysis
             timelockSummary: result.timelockSummary, // Include timelock summary
             tokenInfo: result.tokenInfo, // Include token information with conversion note
-            conversionReminder: "⚠️ IMPORTANT: All vote counts (yesVotes, noVotes, abstainVotes, totalVotes) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens. Use the tokenInfo.decimals field if available.",
+            conversionReminder: "⚠️ IMPORTANT: All vote counts (yesVotes, noVotes, abstainVotes, totalVotes) are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -603,7 +603,7 @@ class TallyMcpServer {
               startCursor: undefined,
               endCursor: undefined,
             },
-            conversionReminder: "⚠️ IMPORTANT: All vote counts in proposal votingStats are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
+            conversionReminder: "⚠️ IMPORTANT: All vote counts in proposal votingStats are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -770,7 +770,7 @@ class TallyMcpServer {
               startCursor: result?.pageInfo.startCursor,
               endCursor: result?.pageInfo.endCursor,
             },
-            conversionReminder: result?.conversionReminder || "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (typically 18 for most governance tokens). Use tokenInfo.decimals when available.",
+            conversionReminder: result?.conversionReminder || "⚠️ IMPORTANT: All votesCount values are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^decimals using the tokenInfo.decimals field, or use 18 decimals as default.",
           };
 
           return {
@@ -855,7 +855,7 @@ class TallyMcpServer {
               startCursor: result?.pageInfo.startCursor,
               endCursor: result?.pageInfo.endCursor,
             },
-            conversionReminder: "⚠️ IMPORTANT: All vote counts and voting power values (votesCount, delegated amounts) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
+            conversionReminder: "⚠️ IMPORTANT: All vote counts and voting power values (votesCount, delegated amounts) are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -1065,7 +1065,7 @@ class TallyMcpServer {
         name,
         `Governance analysis prompt: ${name.replace(/-/g, ' ')}`,
         prompt.schema,
-        async (args): Promise<GetPromptResult> => {
+        async (args: any): Promise<GetPromptResult> => {
           return prompt.handler(args);
         }
       );
@@ -1381,7 +1381,7 @@ class TallyMcpServer {
         name,
         `Governance analysis prompt: ${name.replace(/-/g, ' ')}`,
         prompt.schema,
-        async (args): Promise<GetPromptResult> => {
+        async (args: any): Promise<GetPromptResult> => {
           return prompt.handler(args);
         }
       );

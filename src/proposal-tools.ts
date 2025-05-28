@@ -215,6 +215,9 @@ export async function listProposals(
     sortOrder = 'desc',
   } = validation.data;
 
+  const typedPage = page as number;
+  const typedPageSize = pageSize as number;
+
   // Build GraphQL query - only include sort if needed
   const includeSort = sortOrder === 'asc'; // desc is default, so only include if asc requested
 
@@ -388,8 +391,8 @@ export async function listProposals(
       hasNextPage: false, // Tally API doesn't provide this info directly
       hasPreviousPage: false,
       totalCount: proposals.length, // Use actual count of returned proposals
-      currentPage: page,
-      pageSize,
+      currentPage: typedPage,
+      pageSize: typedPageSize,
     },
   };
 }
@@ -550,7 +553,7 @@ export async function getProposal(
       symbol: tokenSymbol,
       name: tokenInfo?.name || '',
       decimals: decimals,
-      conversionNote: `⚠️ IMPORTANT: All vote counts are in raw token units. To get human-readable amounts, divide by 10^${decimals}. For example, ${proposal.voteStats?.find((v: any) => v.type === 'for')?.votesCount || '0'} raw units = ${proposal.voteStats?.find((v: any) => v.type === 'for')?.votesCount ? (BigInt(proposal.voteStats.find((v: any) => v.type === 'for').votesCount) / BigInt(10 ** decimals)).toString() : '0'} ${tokenSymbol}`,
+      conversionNote: `⚠️ IMPORTANT: All vote counts are in raw token units (Ethereum-style). To convert to human-readable amounts, divide by 10^${decimals}. LLM must perform this calculation.`,
     },
     executionDetails: {
       status: proposal.status,
@@ -600,6 +603,9 @@ export async function getActiveProposals(
 
   // Apply defaults
   const { page = 1, pageSize = 20, chainId, organizationId } = validation.data;
+
+  const typedPage = page as number;
+  const typedPageSize = pageSize as number;
 
   if (organizationId) {
     // If organizationId is provided, query that specific organization's proposals
@@ -670,7 +676,7 @@ export async function getActiveProposals(
     // Filter for truly votable proposals (active or extended status)
     const votableProposals = result.proposals.nodes
       .filter((proposal: any) => proposal.status === 'active' || proposal.status === 'extended')
-      .slice(0, pageSize) // Apply pagination after filtering
+      .slice(0, typedPageSize) // Apply pagination after filtering
       .map((proposal: any) => ({
         id: proposal.id,
         title: proposal.metadata.title,
@@ -709,8 +715,8 @@ export async function getActiveProposals(
         hasNextPage: false, // Tally API doesn't provide this info directly
         hasPreviousPage: false,
         totalCount: votableProposals.length,
-        currentPage: page,
-        pageSize: pageSize,
+        currentPage: typedPage,
+        pageSize: typedPageSize,
       },
     };
   }
@@ -751,8 +757,8 @@ export async function getActiveProposals(
         hasNextPage: false,
         hasPreviousPage: false,
         totalCount: 0,
-        currentPage: page,
-        pageSize: pageSize,
+        currentPage: typedPage,
+        pageSize: typedPageSize,
       },
     };
   }
@@ -873,18 +879,18 @@ export async function getActiveProposals(
   });
 
   // Apply pagination
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
+  const startIndex = (typedPage - 1) * typedPageSize;
+  const endIndex = startIndex + typedPageSize;
   const paginatedProposals = sortedProposals.slice(startIndex, endIndex);
 
   return {
     proposals: paginatedProposals,
     pagination: {
       hasNextPage: endIndex < sortedProposals.length,
-      hasPreviousPage: page > 1,
+      hasPreviousPage: typedPage > 1,
       totalCount: sortedProposals.length,
-      currentPage: page,
-      pageSize: pageSize,
+      currentPage: typedPage,
+      pageSize: typedPageSize,
     },
   };
 }

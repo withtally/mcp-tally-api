@@ -314,8 +314,8 @@ export async function getUserDAOs(
     return result.delegatees.nodes.map((delegation: any) => ({
       ...delegation,
       conversionNote: delegation.token?.decimals 
-        ? `⚠️ Raw value: ${delegation.votes} units. Human-readable: ${delegation.votes ? (BigInt(delegation.votes) / BigInt(10 ** delegation.token.decimals)).toString() : '0'} ${delegation.token.symbol}`
-        : `⚠️ Raw value: ${delegation.votes} units. Divide by 10^18 (default) to get human-readable ${delegation.token.symbol} amount`,
+        ? `To convert to human-readable amount: divide ${delegation.votes} by 10^${delegation.token.decimals} (Ethereum-style decimal places)`
+        : `To convert to human-readable amount: divide ${delegation.votes} by 10^18 (default Ethereum token decimals)`,
     }));
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -408,7 +408,7 @@ export async function getDAOParticipants(
         startCursor: result.delegates.pageInfo?.firstCursor,
         endCursor: result.delegates.pageInfo?.lastCursor,
       },
-      conversionReminder: "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (typically 18 for most governance tokens). Use tokenInfo.decimals when available.",
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values in delegate participations are in raw token units (Ethereum-style). Use tokenInfo.decimals field to convert: human-readable amount = raw value ÷ 10^decimals.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -502,14 +502,14 @@ export async function getUserDetails(
         decimals: delegate.token.decimals || 18,
       } : undefined,
       conversionNote: delegate.token?.decimals 
-        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
-        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable amount`,
+        ? `To convert to human-readable amount: divide ${delegate.votesCount} by 10^${delegate.token.decimals} (Ethereum-style decimal places)`
+        : `To convert to human-readable amount: divide ${delegate.votesCount} by 10^18 (default Ethereum token decimals)`,
     }));
 
     return {
       ...result.accountV2,
       delegateParticipations,
-      conversionReminder: "⚠️ IMPORTANT: All votesCount values in delegate participations are in raw token units. Check individual conversionNote fields or use tokenInfo.decimals to convert to human-readable amounts.",
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values in delegate participations are in raw token units (Ethereum-style). Use tokenInfo.decimals field to convert: human-readable amount = raw value ÷ 10^decimals.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -611,8 +611,8 @@ export async function getDelegates(
         decimals: delegate.token?.decimals || 18,
       },
       conversionNote: delegate.token?.decimals 
-        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
-        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable ${delegate.token?.symbol || 'tokens'}`,
+        ? `To convert to human-readable amount: divide ${delegate.votesCount} by 10^${delegate.token.decimals} (Ethereum-style decimal places)`
+        : `To convert to human-readable amount: divide ${delegate.votesCount} by 10^18 (default Ethereum token decimals)`,
     }));
 
     return {
@@ -624,7 +624,7 @@ export async function getDelegates(
         startCursor: result.delegates.pageInfo?.firstCursor,
         endCursor: result.delegates.pageInfo?.lastCursor,
       },
-      conversionReminder: "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (check token.decimals field or use 18 as default). Individual conversionNote fields show calculated examples.",
+      conversionReminder: "⚠️ IMPORTANT: All votesCount values in delegate participations are in raw token units (Ethereum-style). Use tokenInfo.decimals field to convert: human-readable amount = raw value ÷ 10^decimals.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -736,8 +736,8 @@ export async function getUserProfile(
       },
       votes: delegation.votes,
       conversionNote: delegation.token?.decimals 
-        ? `⚠️ Delegation: ${delegation.votes} raw units = ${delegation.votes ? (BigInt(delegation.votes) / BigInt(10 ** delegation.token.decimals)).toString() : '0'} ${delegation.token.symbol}`
-        : `⚠️ Delegation: ${delegation.votes} raw units. Divide by 10^18 (default) for human-readable ${delegation.token.symbol} amount`,
+        ? `To convert to human-readable amount: divide ${delegation.votes} by 10^${delegation.token.decimals} (Ethereum-style decimal places)`
+        : `To convert to human-readable amount: divide ${delegation.votes} by 10^18 (default Ethereum token decimals)`,
     }));
 
     // Transform delegate participations with conversion notes
@@ -755,15 +755,15 @@ export async function getUserProfile(
         decimals: delegate.token.decimals || 18,
       } : undefined,
       conversionNote: delegate.token?.decimals 
-        ? `⚠️ Voting power: ${delegate.votesCount} raw units = ${delegate.votesCount ? (BigInt(delegate.votesCount) / BigInt(10 ** delegate.token.decimals)).toString() : '0'} ${delegate.token.symbol}`
-        : `⚠️ Voting power: ${delegate.votesCount} raw units. Divide by 10^18 (default) for human-readable amount`,
+        ? `To convert to human-readable amount: divide ${delegate.votesCount} by 10^${delegate.token.decimals} (Ethereum-style decimal places)`
+        : `To convert to human-readable amount: divide ${delegate.votesCount} by 10^18 (default Ethereum token decimals)`,
     }));
 
     return {
       ...result.accountV2,
       daoParticipations,
       delegateParticipations,
-      conversionReminder: "⚠️ IMPORTANT: All vote counts and delegation amounts are in raw token units. Check individual conversionNote fields or use token decimals to convert to human-readable amounts. DAO participations show delegated amounts, delegate participations show voting power.",
+      conversionReminder: "⚠️ IMPORTANT: All vote counts and delegation amounts are in raw token units (Ethereum-style). Use token decimals to convert: human-readable amount = raw value ÷ 10^decimals. DAO participations show delegated amounts, delegate participations show voting power.",
     };
   } catch (error: any) {
     if (error.response?.status === 422) {
