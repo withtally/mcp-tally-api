@@ -148,6 +148,12 @@ export interface ProposalDetails extends ProposalSummary {
     totalTokenTransfers: number;
     majorOperations: string[];
   };
+  tokenInfo: {
+    symbol: string;
+    name: string;
+    decimals: number;
+    conversionNote: string;
+  };
 }
 
 export interface PaginationInfo {
@@ -431,6 +437,16 @@ export async function getProposal(
           address
           name
         }
+        governor {
+          id
+          tokenId
+          token {
+            id
+            symbol
+            name
+            decimals
+          }
+        }
         voteStats {
           type
           votesCount
@@ -488,6 +504,11 @@ export async function getProposal(
   // Analyze timelock operations from executable calls
   const timelockAnalysis = analyzeTimelockOperations(proposal.executableCalls || []);
   
+  // Get token information for vote conversion
+  const tokenInfo = proposal.governor?.token || null;
+  const decimals = tokenInfo?.decimals || 18; // Default to 18 if not available
+  const tokenSymbol = tokenInfo?.symbol || 'TOKEN';
+  
   return {
     id: proposal.id,
     title: proposal.metadata.title,
@@ -524,6 +545,12 @@ export async function getProposal(
             0
           )
           .toString() || '0',
+    },
+    tokenInfo: {
+      symbol: tokenSymbol,
+      name: tokenInfo?.name || '',
+      decimals: decimals,
+      conversionNote: `⚠️ IMPORTANT: All vote counts are in raw token units. To get human-readable amounts, divide by 10^${decimals}. For example, ${proposal.voteStats?.find((v: any) => v.type === 'for')?.votesCount || '0'} raw units = ${proposal.voteStats?.find((v: any) => v.type === 'for')?.votesCount ? (BigInt(proposal.voteStats.find((v: any) => v.type === 'for').votesCount) / BigInt(10 ** decimals)).toString() : '0'} ${tokenSymbol}`,
     },
     executionDetails: {
       status: proposal.status,

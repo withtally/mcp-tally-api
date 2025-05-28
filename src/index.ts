@@ -254,6 +254,7 @@ class TallyMcpServer {
             github: result.github,
             timelocks: result.timelocks, // Include timelock information
             safes: result.safes, // Include safe addresses
+            conversionReminder: "⚠️ IMPORTANT: When analyzing proposals or votes for this organization, remember that all vote counts and token amounts are in raw token units. Check the tokenInfo.decimals in timelock data or use 18 decimals as default for most governance tokens to convert to human-readable amounts.",
           };
 
           return {
@@ -437,6 +438,7 @@ class TallyMcpServer {
               startCursor: undefined,
               endCursor: undefined,
             },
+            conversionReminder: "⚠️ IMPORTANT: All vote counts in votingStats (yesVotes, noVotes, abstainVotes) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -527,6 +529,8 @@ class TallyMcpServer {
             executableCalls: result.executableCalls, // Include detailed executable calls
             timelockOperations: result.timelockOperations, // Include timelock analysis
             timelockSummary: result.timelockSummary, // Include timelock summary
+            tokenInfo: result.tokenInfo, // Include token information with conversion note
+            conversionReminder: "⚠️ IMPORTANT: All vote counts (yesVotes, noVotes, abstainVotes, totalVotes) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens. Use the tokenInfo.decimals field if available.",
           };
 
           return {
@@ -599,6 +603,7 @@ class TallyMcpServer {
               startCursor: undefined,
               endCursor: undefined,
             },
+            conversionReminder: "⚠️ IMPORTANT: All vote counts in proposal votingStats are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {
@@ -849,6 +854,7 @@ class TallyMcpServer {
               startCursor: result?.pageInfo.startCursor,
               endCursor: result?.pageInfo.endCursor,
             },
+            conversionReminder: "⚠️ IMPORTANT: All vote counts and voting power values (votesCount, delegated amounts) are in raw token units. To convert to human-readable amounts, divide by 10^decimals where decimals is typically 18 for most governance tokens.",
           };
 
           return {

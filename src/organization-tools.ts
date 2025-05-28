@@ -76,6 +76,11 @@ export interface TimelockInfo {
   governorId: string;
   timelockAddress?: string;
   governorAddress: string;
+  tokenInfo?: {
+    symbol: string;
+    name: string;
+    decimals: number;
+  };
 }
 
 export interface OrganizationSummary {
@@ -333,6 +338,12 @@ export async function getOrganization(
             governor(input: { id: $governorId }) {
               id
               timelockId
+              token {
+                id
+                symbol
+                name
+                decimals
+              }
               contracts {
                 governor {
                   address
@@ -351,6 +362,11 @@ export async function getOrganization(
             governorId: governorResult.governor.id,
             timelockAddress: governorResult.governor.timelockId,
             governorAddress: governorResult.governor.contracts?.governor?.address || governorId,
+            tokenInfo: {
+              symbol: governorResult.governor.token?.symbol || '',
+              name: governorResult.governor.token?.name || '',
+              decimals: governorResult.governor.token?.decimals || 0,
+            },
           });
         }
       } catch (error) {
@@ -360,6 +376,7 @@ export async function getOrganization(
           governorId,
           timelockAddress: undefined,
           governorAddress: governorId,
+          tokenInfo: undefined,
         });
       }
     }
@@ -381,6 +398,8 @@ export async function getOrganization(
       failed: 0, // Would need separate query
     },
     memberCount: org.delegatesCount,
+    createdAt: '', // Not available in Tally API
+    tokens: [], // Would need separate query
     timelocks,
     safes,
   };
