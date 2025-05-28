@@ -72,6 +72,12 @@ export interface Token {
   decimals: number;
 }
 
+export interface TimelockInfo {
+  governorId: string;
+  timelockAddress?: string;
+  governorAddress: string;
+}
+
 export interface OrganizationSummary {
   id: string;
   name: string;
@@ -80,6 +86,8 @@ export interface OrganizationSummary {
   description: string;
   proposalStats: ProposalStats;
   memberCount: number;
+  timelocks?: TimelockInfo[];
+  safes?: string[];
 }
 
 export interface OrganizationDetails extends OrganizationSummary {
@@ -90,9 +98,10 @@ export interface OrganizationDetails extends OrganizationSummary {
     passed: number;
     failed: number;
   };
-  treasuryValue?: string;
   createdAt: string;
   tokens: Token[];
+  timelocks: TimelockInfo[];
+  safes: string[];
 }
 
 export interface ActiveProposal {
@@ -292,6 +301,7 @@ export async function getOrganization(
         creator {
           address
           name
+          safes
         }
       }
     }
@@ -309,6 +319,52 @@ export async function getOrganization(
   }
 
   const org = result.organization;
+  
+  // Fetch all governors' details for timelock info
+  let timelocks: TimelockInfo[] = [];
+  let safes: string[] = org.creator?.safes || [];
+
+  if (org.governorIds && org.governorIds.length > 0) {
+    // Fetch details for all governors
+    for (const governorId of org.governorIds) {
+      try {
+        const governorQuery = `
+          query GetGovernor($governorId: AccountID!) {
+            governor(input: { id: $governorId }) {
+              id
+              timelockId
+              contracts {
+                governor {
+                  address
+                }
+              }
+            }
+          }
+        `;
+
+        const governorResult = await client.query(governorQuery, {
+          governorId,
+        });
+
+        if (governorResult.governor) {
+          timelocks.push({
+            governorId: governorResult.governor.id,
+            timelockAddress: governorResult.governor.timelockId,
+            governorAddress: governorResult.governor.contracts?.governor?.address || governorId,
+          });
+        }
+      } catch (error) {
+        // If governor query fails, continue with basic info for this governor
+        console.warn(`Failed to fetch governor details for ${governorId}:`, error);
+        timelocks.push({
+          governorId,
+          timelockAddress: undefined,
+          governorAddress: governorId,
+        });
+      }
+    }
+  }
+
   return {
     id: org.id,
     name: org.name,
@@ -325,9 +381,8 @@ export async function getOrganization(
       failed: 0, // Would need separate query
     },
     memberCount: org.delegatesCount,
-    treasuryValue: undefined, // Not available in Tally API
-    createdAt: '', // Not available in Tally API
-    tokens: [], // Would need separate query
+    timelocks,
+    safes,
   };
 }
 

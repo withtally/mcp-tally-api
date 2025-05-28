@@ -76,6 +76,35 @@ export interface ExecutionDetails {
   transactionHash: string | null;
 }
 
+export interface TimelockOperation {
+  type: 'erc20transfer' | 'nativetransfer' | 'custom' | 'other';
+  target: string;
+  value: string;
+  tokenAddress?: string;
+  tokenSymbol?: string;
+  amount?: string;
+  recipient?: string;
+  description: string;
+}
+
+export interface ExecutableCallDetail {
+  id: string;
+  target: string;
+  value: string;
+  signature: string;
+  calldata: string;
+  type?: string;
+  decodedCalldata?: {
+    signature: string;
+    parameters: Array<{
+      name: string;
+      type: string;
+      value: string;
+    }>;
+  };
+  timelockOperation?: TimelockOperation;
+}
+
 export interface ProposalAction {
   id: string;
   target: string;
@@ -112,6 +141,13 @@ export interface ProposalDetails extends ProposalSummary {
   };
   executionDetails: ExecutionDetails;
   actions: ProposalAction[];
+  executableCalls: ExecutableCallDetail[];
+  timelockOperations: TimelockOperation[];
+  timelockSummary: {
+    totalEthValue: string;
+    totalTokenTransfers: number;
+    majorOperations: string[];
+  };
 }
 
 export interface PaginationInfo {
@@ -448,6 +484,10 @@ export async function getProposal(
   }
 
   const proposal = result.proposal;
+  
+  // Analyze timelock operations from executable calls
+  const timelockAnalysis = analyzeTimelockOperations(proposal.executableCalls || []);
+  
   return {
     id: proposal.id,
     title: proposal.metadata.title,
@@ -498,6 +538,18 @@ export async function getProposal(
         signature: call.signature,
         calldata: call.calldata,
       })) || [],
+    executableCalls:
+      proposal.executableCalls?.map((call: any, index: number) => ({
+        id: index.toString(),
+        target: call.target,
+        value: call.value,
+        signature: call.signature,
+        calldata: call.calldata,
+        type: call.type,
+        decodedCalldata: call.decodedCalldata,
+      })) || [],
+    timelockOperations: timelockAnalysis.operations,
+    timelockSummary: timelockAnalysis.summary,
   };
 }
 
@@ -806,6 +858,103 @@ export async function getActiveProposals(
       totalCount: sortedProposals.length,
       currentPage: page,
       pageSize: pageSize,
+    },
+  };
+}
+
+/**
+ * Analyze executable calls to extract timelock operations
+ */
+function analyzeTimelockOperations(executableCalls: any[]): {
+  operations: TimelockOperation[];
+  summary: {
+    totalEthValue: string;
+    totalTokenTransfers: number;
+    majorOperations: string[];
+  };
+} {
+  const operations: TimelockOperation[] = [];
+  let totalEthValue = BigInt(0);
+  let totalTokenTransfers = 0;
+  const majorOperations: string[] = [];
+
+  for (const call of executableCalls) {
+    const ethValue = BigInt(call.value || '0');
+    
+    // Determine operation type based on decoded calldata or signature
+    let operationType: TimelockOperation['type'] = 'custom';
+    let description = '';
+    let tokenAddress: string | undefined;
+    let amount: string | undefined;
+    let recipient: string | undefined;
+
+    // Analyze by function signature if available
+    const signature = call.decodedCalldata?.signature || call.signature || '';
+    
+    if (signature.includes('transfer(')) {
+      operationType = 'erc20transfer';
+      description = 'ERC20 Token Transfer';
+      totalTokenTransfers++;
+      
+      // Extract recipient and amount from parameters
+      if (call.decodedCalldata?.parameters) {
+        const params = call.decodedCalldata.parameters;
+        recipient = params.find((p: any) => p.name === 'to' || p.name === 'recipient')?.value;
+        amount = params.find((p: any) => p.name === 'amount' || p.name === 'value')?.value;
+      }
+      tokenAddress = call.target;
+    } else if (signature.includes('transferFrom(')) {
+      operationType = 'erc20transfer';
+      description = 'ERC20 Token Transfer (From)';
+      totalTokenTransfers++;
+      
+      if (call.decodedCalldata?.parameters) {
+        const params = call.decodedCalldata.parameters;
+        recipient = params.find((p: any) => p.name === 'to')?.value;
+        amount = params.find((p: any) => p.name === 'amount' || p.name === 'value')?.value;
+      }
+      tokenAddress = call.target;
+    } else if (ethValue > 0n) {
+      operationType = 'nativetransfer';
+      description = `Native Token Transfer: ${ethValue.toString()} wei`;
+      recipient = call.target;
+      amount = ethValue.toString();
+      totalEthValue += ethValue;
+    } else if (signature.includes('execute(') || signature.includes('multicall(')) {
+      operationType = 'custom';
+      description = 'Complex Timelock Operation';
+    } else {
+      operationType = 'other';
+      description = signature || 'Unknown Operation';
+    }
+
+    // Create timelock operation
+    const operation: TimelockOperation = {
+      type: operationType,
+      target: call.target,
+      value: call.value || '0',
+      tokenAddress,
+      amount,
+      recipient,
+      description,
+    };
+
+    operations.push(operation);
+
+    // Add to major operations if significant
+    if (ethValue > BigInt('1000000000000000000') || // > 1 ETH
+        operationType === 'erc20transfer' ||
+        operationType === 'custom') {
+      majorOperations.push(description);
+    }
+  }
+
+  return {
+    operations,
+    summary: {
+      totalEthValue: totalEthValue.toString(),
+      totalTokenTransfers,
+      majorOperations,
     },
   };
 }

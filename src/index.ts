@@ -252,6 +252,8 @@ class TallyMcpServer {
             website: result.website,
             twitter: result.twitter,
             github: result.github,
+            timelocks: result.timelocks, // Include timelock information
+            safes: result.safes, // Include safe addresses
           };
 
           return {
@@ -522,6 +524,9 @@ class TallyMcpServer {
             endTime: result.endTime,
             executionDetails: result.executionDetails,
             actions: result.actions,
+            executableCalls: result.executableCalls, // Include detailed executable calls
+            timelockOperations: result.timelockOperations, // Include timelock analysis
+            timelockSummary: result.timelockSummary, // Include timelock summary
           };
 
           return {
