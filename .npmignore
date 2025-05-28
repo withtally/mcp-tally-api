@@ -1,0 +1,44 @@
+# Source files (only include dist/)
+src/
+tests/
+scripts/
+
+# Development files
+.cursor/
+.roo/
+*.config.ts
+*.config.js
+vitest.config.ts
+tsconfig.json
+.eslintrc.json
+.prettierrc.json
+
+# Environment and local files
+.env
+.env.*
+.taskmasterconfig
+
+# Git and editor files
+.git/
+.gitignore
+.windsurfrules
+.roomodes
+
+# Documentation not needed in package
+docs/
+examples/
+COMPREHENSIVE_TESTING_TASKS.md
+FIX_SUMMARY.md
+TEST_OPTIMIZATION_SUMMARY.md
+TEST_HARNESS_SUMMARY.md
+
+# Testing and build artifacts
+coverage/
+*.log
+node_modules/
+bun.lockb
+
+# Test scripts and utilities
+test-mcp-server.js
+test-simple.sh
+mcp-config.json 
