@@ -770,6 +770,7 @@ class TallyMcpServer {
               startCursor: result?.pageInfo.startCursor,
               endCursor: result?.pageInfo.endCursor,
             },
+            conversionReminder: result?.conversionReminder || "⚠️ IMPORTANT: All votesCount values are in raw token units. To convert to human-readable amounts, divide by 10^decimals (typically 18 for most governance tokens). Use tokenInfo.decimals when available.",
           };
 
           return {
