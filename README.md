@@ -2,6 +2,60 @@
 
 A Model Context Protocol (MCP) server that provides LLMs with access to Tally's blockchain governance API for querying DAOs, proposals, and voting data across multiple networks.
 
+## 🚀 Quick Start
+
+Get started with MCP Tally API in Cursor or Claude Desktop in 2 minutes:
+
+### 1. Get a Tally API Key
+Sign up at [Tally.xyz](https://tally.xyz) to get your free API key.
+
+### 2. Install the MCP Server
+```bash
+npm install -g mcp-tally-api
+```
+
+### 3. Configure Cursor/Claude Desktop
+Add to your MCP configuration file:
+
+**Cursor:** Edit `.cursor/mcp.json` in your project:
+```json
+{
+  "servers": {
+    "tally": {
+      "command": "mcp-tally-api",
+      "env": {
+        "TALLY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+**Claude Desktop:** Edit `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "tally": {
+      "command": "mcp-tally-api",
+      "env": {
+        "TALLY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+### 4. Start Using
+Restart Cursor/Claude Desktop and start asking about DAOs:
+
+> "What are the most popular DAOs with active proposals?"  
+> "Show me details about Uniswap governance"  
+> "Who are the top delegates in Arbitrum DAO?"
+
+🎯 **You now have access to 12 tools and 6 resources for comprehensive DAO governance analysis!**
+
+---
+
 ## Features
 
 ### 🚀 **Features**
@@ -368,331 +422,3 @@ TALLY_API_KEY=your_api_key_here bun run start:http
 # Server runs on http://localhost:3000 by default
 # Configure port: PORT=8080 bun run start:http
 ```
-
-**HTTP API Usage:**
-
-```bash
-# Initialize connection
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}'
-
-# List available tools
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}'
-
-# Call a tool
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "get_server_info", "arguments": {}}}'
-```
-
-**Note:** HTTP mode requires both `application/json` and `text/event-stream` in the Accept header for proper MCP protocol support.
-
-### Usage with Cursor
-
-#### **STDIO Mode (Recommended)**
-
-**If installed via npm globally:**
-
-Add to your `.cursor/mcp.json`:
-
-```json
-{
-  "servers": {
-    "tally": {
-      "command": "mcp-tally-api",
-      "env": {
-        "TALLY_API_KEY": "your_api_key_here"
-      }
-    }
-  }
-}
-```
-
-**If built from source:**
-
-Add to your `.cursor/mcp.json`:
-
-```json
-{
-  "servers": {
-    "tally": {
-      "command": "bun",
-      "args": ["run", "start"],
-      "cwd": "/path/to/mcp-tally-api",
-      "env": {
-        "TALLY_API_KEY": "your_api_key_here"
-      }
-    }
-  }
-}
-```
-
-#### **HTTP Mode**
-
-For remote server deployments, first start the HTTP server:
-
-```bash
-# On your server
-TALLY_API_KEY=your_api_key_here bun run start:http
-```
-
-Then configure Cursor to connect to the HTTP endpoint:
-
-```json
-{
-  "servers": {
-    "tally-http": {
-      "command": "curl",
-      "args": [
-        "-X", "POST",
-        "http://your-server:3000/mcp",
-        "-H", "Content-Type: application/json",
-        "-H", "Accept: application/json, text/event-stream",
-        "-d", "@-"
-      ]
-    }
-  }
-}
-```
-
-**Transport Mode Comparison:**
-
-| Feature | STDIO Mode | HTTP Mode |
-|---------|------------|-----------|
-| **Performance** | ⚡ Fastest (direct process communication) | 🌐 Network latency |
-| **Deployment** | 📱 Local only | 🌍 Remote deployments |
-| **Scaling** | 👤 Single user | 👥 Multiple users |
-| **Security** | 🔒 Process isolation | 🛡️ Network security required |
-| **Use Case** | Cursor, local development | Web apps, shared services |
-
-## Testing Architecture
-
-We've implemented a comprehensive, multi-layered testing strategy that validates both the MCP server implementation and the live API integration:
-
-### 🧪 **Testing Methodology**
-
-#### **1. Live Integration Testing (`tests/live-server.test.ts`)**
-
-Our primary testing approach spawns the **actual MCP server** and tests against the **real Tally API**:
-
-```typescript
-// Spawns real MCP server as child process
-const server = spawn('bun', ['run', 'dist/index.js'], {
-  env: { TALLY_API_KEY: process.env.TALLY_API_KEY, TRANSPORT_MODE: 'stdio' },
-});
-
-// Tests real JSON-RPC communication
-const result = await client.callTool('list_organizations', { pageSize: 5 });
-```
-
-**Coverage**: 30 comprehensive tests across 8 categories:
-
-- ✅ **Server Initialization** (2 tests): Tool registration, resource availability
-- ✅ **Organization Tools** (11 tests): Pagination, filtering, sorting, error handling
-- ✅ **Proposal Tools** (6 tests): Proposal listing, details, active proposals
-- ✅ **Resources** (2 tests): Popular DAOs mapping, server info
-- ✅ **Error Handling** (3 tests): Invalid inputs, graceful degradation
-- ✅ **Performance** (2 tests): Response times, concurrent requests
-- ✅ **Data Integrity** (2 tests): Consistency between endpoints
-- ✅ **Rate Limiting** (2 tests): API throttling, retry behavior
-
-#### **2. Dynamic Popular DAOs Testing (`tests/popular-daos-dynamic.test.ts`)**
-
-Focused testing for the dynamic Popular DAOs resource that loads live data at server startup:
-
-```typescript
-// Tests the dynamic resource loading functionality
-const result = await client.readResource('tally://popular-daos');
-const data = JSON.parse(result.contents[0].text);
-
-// Validates multi-network coverage and delegate ranking
-expect(data.networks_included).toHaveLength(8); // 8 production networks
-expect(data.daos[0].delegateCount).toBeGreaterThanOrEqual(data.daos[1].delegateCount);
-```
-
-**Validation Points**:
-- ✅ **Multiple Networks**: Verifies 8 production blockchain networks are included
-- ✅ **Multiple DAOs**: Confirms 10-30 DAOs are loaded successfully  
-- ✅ **Delegate Ranking**: Validates DAOs are sorted by delegate count (descending)
-- ✅ **Network Distribution**: Ensures DAOs span multiple chains (6+ networks)
-- ✅ **No Testnets**: Confirms no testnet chains are included
-- ✅ **Major DAOs**: Verifies inclusion of expected top-tier DAOs (Arbitrum, Optimism, etc.)
-- ✅ **Data Structure**: Validates complete DAO metadata (delegateCount, memberCount, etc.)
-
-#### **3. Rate Limiting & Performance**
-
-Tests include intelligent rate limiting to avoid API throttling:
-
-```typescript
-afterEach(async () => {
-  await delay(1000); // 1 second between tests
-});
-```
-
-Performance benchmarks ensure sub-5-second response times for all operations.
-
-#### **4. Data Validation**
-
-Comprehensive schema validation using Zod ensures response structure integrity:
-
-```typescript
-const OrganizationSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  memberCount: z.number(),
-  // ... complete validation
-});
-```
-
-#### **5. Multi-Network Testing**
-
-Tests validate functionality across 5 production networks:
-
-- Ethereum (eip155:1)
-- Arbitrum (eip155:42161)
-- Optimism (eip155:10)
-- zkSync (eip155:324)
-- Gnosis (eip155:100)
-
-### 🚀 **Running Tests**
-
-#### **Quick Test Run**
-
-```bash
-# Run all live tests (requires API key)
-export TALLY_API_KEY=your_key_here
-bun run test:live
-
-# Run specific test category
-bun run vitest tests/live-server.test.ts -t "Organization Tools"
-
-# Run dynamic Popular DAOs test
-bun test tests/popular-daos-dynamic.test.ts
-
-# Run with verbose output
-bun run test:live --reporter=verbose
-```
-
-#### **Complete Test Suite**
-
-```bash
-# Run comprehensive testing script
-./scripts/run-live-tests.sh
-
-# This script:
-# ✅ Validates API key presence
-# ✅ Builds the project
-# ✅ Runs all 30 live integration tests
-# ✅ Provides detailed pass/fail reporting
-# ✅ Includes performance benchmarks
-```
-
-#### **Manual Testing**
-
-For debugging or exploration:
-
-**STDIO Mode:**
-```bash
-# Test specific tool via JSON-RPC
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "list_organizations", "arguments": {"pageSize": 5}}}' | TALLY_API_KEY=$TALLY_API_KEY TRANSPORT_MODE=stdio bun run start
-
-# Test resource access
-echo '{"jsonrpc": "2.0", "id": 1, "method": "resources/read", "params": {"uri": "tally://popular-daos"}}' | TALLY_API_KEY=$TALLY_API_KEY TRANSPORT_MODE=stdio bun run start
-```
-
-**HTTP Mode:**
-```bash
-# Start HTTP server in background
-TALLY_API_KEY=$TALLY_API_KEY bun run start:http &
-
-# Test specific tool via cURL
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "list_organizations", "arguments": {"pageSize": 5}}}'
-
-# Test resource access
-curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "resources/read", "params": {"uri": "tally://popular-daos"}}'
-```
-
-### 📊 **Test Results & CI**
-
-Our tests achieve **100% pass rate** with the live Tally API:
-
-- **30/30 tests passing** ✅
-- **Average response time**: <2 seconds
-- **Rate limit compliance**: Zero 429 errors
-- **Multi-chain validation**: All 5 networks supported
-- **Error handling**: Graceful degradation for invalid inputs
-
-### 🎯 **Test-Driven Development**
-
-We follow TDD principles:
-
-1. **Write failing tests** that define expected behavior
-2. **Implement minimal code** to make tests pass
-3. **Refactor and optimize** while maintaining test coverage
-4. **Validate with live API** to ensure real-world functionality
-
-## API Alignment
-
-This MCP server strictly follows **API-side processing** principles:
-
-- ❌ **No client-side filtering, sorting, or pagination**
-- ✅ **All operations use Tally API's native capabilities**
-- ✅ **Real-time data without stale caches**
-- ✅ **Consistent response structures across tools**
-
-The Popular DAOs resource is intentionally minimal, containing only stable identifiers (ID, name, slug, chainId) to prevent stale metadata. For current statistics, users must call the live API tools.
-
-## Development
-
-### Project Structure
-
-```
-src/
-├── index.ts              # MCP server implementation
-├── auth.ts              # API key management
-├── graphql-client.ts    # Tally API client with rate limiting
-├── organization-tools.ts # DAO querying tools
-├── proposal-tools.ts    # Proposal querying tools
-├── user-tools.ts       # User and delegation tools
-└── resources/          # Static resources
-    └── popular-daos.ts # DAO ID mappings
-
-tests/
-├── live-server.test.ts       # Comprehensive integration tests  
-├── popular-daos-dynamic.test.ts # Dynamic Popular DAOs resource tests
-├── setup.ts                 # Test configuration
-└── README.md               # Testing documentation
-```
-
-### Key Technical Features
-
-- **Rate Limiting**: Intelligent request throttling to respect API limits
-- **Error Handling**: Graceful degradation with structured error responses
-- **Type Safety**: Full TypeScript implementation with Zod validation
-- **Performance**: Optimized queries with minimal data transfer
-- **Reliability**: Comprehensive test coverage with real API validation
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Write tests for your changes
-4. Implement your feature
-5. Ensure all tests pass: `bun run test:live`
-6. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
