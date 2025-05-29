@@ -52,7 +52,7 @@ Restart Cursor/Claude Desktop and start asking about DAOs:
 > "Show me details about Uniswap governance"  
 > "Who are the top delegates in Arbitrum DAO?"
 
-🎯 **You now have access to 12 tools and 6 resources for comprehensive DAO governance analysis!**
+🎯 **You now have access to 14 tools and 7 resources for comprehensive DAO governance analysis!**
 
 ---
 
@@ -60,8 +60,8 @@ Restart Cursor/Claude Desktop and start asking about DAOs:
 
 ### 🚀 **Features**
 
-- **🔧 Tools**: 12 comprehensive tools for querying organizations, proposals, users, and delegates
-- **📚 Resources**: 6 browsable resources including Popular DAOs mapping and governance overviews  
+- **🔧 Tools**: 14 comprehensive tools for querying organizations, proposals, users, and delegates
+- **📚 Resources**: 7 browsable resources including Popular DAOs mapping and governance overviews  
 - **🎯 Prompts**: 6 governance-focused prompt templates for structured DAO analysis
 - **⚡ Real-time**: Live data from Tally's GraphQL API with proper error handling
 - **🔍 Filtering**: Advanced filtering, sorting, and pagination across all endpoints
@@ -331,6 +331,50 @@ Analysis framework covering:
 - **Flexible Focus**: Customizable analysis depth and comparison scope
 - **Actionable Insights**: Designed to produce practical recommendations
 
+### ⚡ **Advanced Query Capabilities**
+
+For power users who need access to functionality beyond the pre-built tools, the MCP Tally API server provides direct access to the underlying GraphQL API:
+
+#### **execute_graphql_query Tool**
+
+Execute arbitrary GraphQL queries against the Tally API:
+
+```
+Parameters:
+- query: GraphQL query string
+- variables: Optional variables for the GraphQL query
+
+Example:
+Query: "query GetOrganizations { organizations(input: { page: { limit: 3 } }) { nodes { ... on Organization { id name slug chainIds } } } }"
+
+Response: Raw GraphQL response data with full access to any Tally API functionality
+```
+
+#### **tally-api-schema Resource**
+
+Get the complete GraphQL schema via introspection:
+
+```
+URI: tally://api/schema
+Content-Type: application/json
+
+Returns: Complete GraphQL schema including all types, fields, mutations, enums, and directives
+```
+
+**Benefits:**
+- **Unlimited Access**: Query any data available in the Tally GraphQL API
+- **Real Schema**: Always up-to-date schema directly from the API via introspection
+- **Custom Queries**: Build specialized queries for unique use cases
+- **Development Aid**: Full schema documentation for building custom integrations
+- **Future-Proof**: Access new Tally API features before they're added as dedicated tools
+
+**Use Cases:**
+- Research specific governance patterns not covered by existing tools
+- Build custom analysis workflows with specialized data requirements
+- Access experimental or beta Tally API features
+- Create complex aggregations across multiple data sources
+- Debug and understand the underlying API structure
+
 ## Quick Start
 
 ### Prerequisites
@@ -367,58 +411,4 @@ echo "TALLY_API_KEY=your_api_key_here" > .env
 # Build and test
 bun run build
 bun run test
-```
-
-### Running the Server
-
-The MCP Tally API server supports two transport modes:
-
-#### **STDIO Mode (Default)**
-
-For direct integration with MCP clients like Cursor:
-
-**If installed via npm:**
-```bash
-# Production mode  
-TALLY_API_KEY=your_api_key_here mcp-tally-api
-
-# Using environment file
-mcp-tally-api  # Uses .env file
-```
-
-**If built from source:**
-```bash
-# Development mode with auto-reload
-TALLY_API_KEY=your_api_key_here bun run dev
-
-# Production mode
-TALLY_API_KEY=your_api_key_here bun run start
-
-# Or using environment file
-bun run start  # Uses .env file
-```
-
-#### **HTTP Mode**
-
-For web-based integrations and remote access:
-
-**If installed via npm:**
-```bash
-# Production mode
-TALLY_API_KEY=your_api_key_here TRANSPORT_MODE=http mcp-tally-api
-
-# Configure port
-TALLY_API_KEY=your_api_key_here PORT=8080 TRANSPORT_MODE=http mcp-tally-api
-```
-
-**If built from source:**
-```bash
-# Development mode with auto-reload
-TALLY_API_KEY=your_api_key_here bun run dev:http
-
-# Production mode
-TALLY_API_KEY=your_api_key_here bun run start:http
-
-# Server runs on http://localhost:3000 by default
-# Configure port: PORT=8080 bun run start:http
 ```
