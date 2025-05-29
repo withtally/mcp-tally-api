@@ -890,6 +890,56 @@ class TallyMcpServer {
         }
       }
     );
+
+    // Advanced Query Tool
+    this.server.tool(
+      'execute_graphql_query',
+      'Execute an arbitrary GraphQL query against the Tally API',
+      {
+        query: z.string().describe('GraphQL query string'),
+        variables: z.record(z.any()).optional().describe('Optional variables for the GraphQL query'),
+      },
+      async ({ query, variables }): Promise<CallToolResult> => {
+        try {
+          if (!this.graphqlClient) {
+            throw new Error('Server not properly initialized');
+          }
+
+          // Execute the arbitrary query
+          const result = await this.graphqlClient.query(query, variables);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          // For validation errors and expected errors, throw them
+          if (
+            error instanceof Error &&
+            (error.message.includes('GraphQL errors') ||
+              error.message.includes('rate limit') ||
+              error.message.includes('Invalid'))
+          ) {
+            throw error;
+          }
+
+          // For unexpected errors, return error object
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
   }
 
   private setupResources() {
@@ -1054,6 +1104,132 @@ class TallyMcpServer {
             },
           ],
         };
+      }
+    );
+
+    // GraphQL schema resource
+    this.server.resource(
+      'tally-api-schema',
+      'tally://api/schema',
+      { mimeType: 'application/json' },
+      async (): Promise<ReadResourceResult> => {
+        try {
+          // GraphQL introspection query to get the full schema
+          const introspectionQuery = `
+            query IntrospectionQuery {
+              __schema {
+                types {
+                  name
+                  kind
+                  description
+                  fields {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                      ofType {
+                        name
+                        kind
+                      }
+                    }
+                    args {
+                      name
+                      description
+                      type {
+                        name
+                        kind
+                        ofType {
+                          name
+                          kind
+                        }
+                      }
+                    }
+                  }
+                  inputFields {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                      ofType {
+                        name
+                        kind
+                      }
+                    }
+                  }
+                  interfaces {
+                    name
+                    kind
+                  }
+                  enumValues {
+                    name
+                    description
+                  }
+                  possibleTypes {
+                    name
+                    kind
+                  }
+                }
+                queryType {
+                  name
+                }
+                mutationType {
+                  name
+                }
+                subscriptionType {
+                  name
+                }
+                directives {
+                  name
+                  description
+                  locations
+                  args {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                    }
+                  }
+                }
+              }
+            }
+          `;
+
+          const schemaData = await this.graphqlClient.query(introspectionQuery);
+
+          return {
+            contents: [
+              {
+                uri: 'tally://api/schema',
+                mimeType: 'application/json',
+                text: JSON.stringify({
+                  description: 'Tally GraphQL API Schema',
+                  timestamp: new Date().toISOString(),
+                  schema: schemaData,
+                }, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          // If introspection fails, return basic schema information
+          return {
+            contents: [
+              {
+                uri: 'tally://api/schema',
+                mimeType: 'application/json',
+                text: JSON.stringify({
+                  description: 'Tally GraphQL API Schema (Basic Info)',
+                  timestamp: new Date().toISOString(),
+                  error: `Schema introspection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  endpoint: this.graphqlClient.getEndpoint(),
+                  note: 'Use the execute_graphql_query tool to run custom queries against this API',
+                }, null, 2),
+              },
+            ],
+          };
+        }
       }
     );
   }
@@ -1342,6 +1518,52 @@ class TallyMcpServer {
 
     // For now, I'll add just the essential tools to test the HTTP functionality
     // The complete tool setup can be added later
+
+    // Advanced Query Tool
+    server.tool(
+      'execute_graphql_query',
+      'Execute an arbitrary GraphQL query against the Tally API',
+      {
+        query: z.string().describe('GraphQL query string'),
+        variables: z.record(z.any()).optional().describe('Optional variables for the GraphQL query'),
+      },
+      async ({ query, variables }): Promise<CallToolResult> => {
+        try {
+          // Execute the arbitrary query
+          const result = await graphqlClient.query(query, variables);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          // For validation errors and expected errors, throw them
+          if (
+            error instanceof Error &&
+            (error.message.includes('GraphQL errors') ||
+              error.message.includes('rate limit') ||
+              error.message.includes('Invalid'))
+          ) {
+            throw error;
+          }
+
+          // For unexpected errors, return error object
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
   }
 
   private setupAllResources(server: McpServer, graphqlClient: TallyGraphQLClient) {
@@ -1370,6 +1592,268 @@ class TallyMcpServer {
             },
           ],
         };
+      }
+    );
+
+    // Popular DAOs resource
+    server.resource(
+      'popular-daos',
+      'tally://popular-daos',
+      { mimeType: 'application/json' },
+      async (): Promise<ReadResourceResult> => {
+        if (!graphqlClient) {
+          throw new Error('Server not properly initialized');
+        }
+        
+        const response = await getPopularDAOsData(graphqlClient);
+
+        return {
+          contents: [
+            {
+              uri: 'tally://popular-daos',
+              mimeType: 'application/json',
+              text: JSON.stringify(response, null, 2),
+            },
+          ],
+        };
+      }
+    );
+
+    // Organization overview resource template
+    server.resource(
+      'organization-overview',
+      new ResourceTemplate('tally://org/{organizationId}', { list: undefined }),
+      async (uri, params): Promise<ReadResourceResult> => {
+        if (!graphqlClient) {
+          throw new Error('Server not properly initialized');
+        }
+        
+        const organizationId = Array.isArray(params.organizationId) ? params.organizationId[0] : params.organizationId;
+        
+        if (!organizationId) {
+          throw new Error('Organization ID parameter is required');
+        }
+        
+        const response = await getOrganizationOverview(graphqlClient, organizationId);
+
+        return {
+          contents: [
+            {
+              uri: response.uri,
+              mimeType: response.mimeType,
+              text: response.text,
+            },
+          ],
+        };
+      }
+    );
+
+    // Proposal overview resource template
+    server.resource(
+      'proposal-overview',
+      new ResourceTemplate('tally://org/{organizationId}/proposal/{proposalId}', { list: undefined }),
+      async (uri, params): Promise<ReadResourceResult> => {
+        if (!graphqlClient) {
+          throw new Error('Server not properly initialized');
+        }
+        
+        const organizationId = Array.isArray(params.organizationId) ? params.organizationId[0] : params.organizationId;
+        const proposalId = Array.isArray(params.proposalId) ? params.proposalId[0] : params.proposalId;
+        
+        if (!organizationId || !proposalId) {
+          throw new Error('Both organizationId and proposalId are required');
+        }
+        
+        const response = await getProposalOverview(graphqlClient, organizationId, proposalId);
+
+        return {
+          contents: [
+            {
+              uri: response.uri,
+              mimeType: response.mimeType,
+              text: response.text,
+            },
+          ],
+        };
+      }
+    );
+
+    // User overview resource template
+    server.resource(
+      'user-overview',
+      new ResourceTemplate('tally://user/{address}', { list: undefined }),
+      async (uri, params): Promise<ReadResourceResult> => {
+        if (!graphqlClient) {
+          throw new Error('Server not properly initialized');
+        }
+        
+        const address = Array.isArray(params.address) ? params.address[0] : params.address;
+        
+        if (!address) {
+          throw new Error('Address parameter is required');
+        }
+        
+        const response = await getUserOverview(graphqlClient, address);
+
+        return {
+          contents: [
+            {
+              uri: response.uri,
+              mimeType: response.mimeType,
+              text: response.text,
+            },
+          ],
+        };
+      }
+    );
+
+    // Trending proposals resource
+    server.resource(
+      'trending-proposals',
+      'tally://trending/proposals',
+      { mimeType: 'text/markdown' },
+      async (): Promise<ReadResourceResult> => {
+        if (!graphqlClient) {
+          throw new Error('Server not properly initialized');
+        }
+        
+        const response = await getTrendingProposalsOverview(graphqlClient);
+
+        return {
+          contents: [
+            {
+              uri: response.uri,
+              mimeType: response.mimeType,
+              text: response.text,
+            },
+          ],
+        };
+      }
+    );
+
+    // GraphQL schema resource
+    server.resource(
+      'tally-api-schema',
+      'tally://api/schema',
+      { mimeType: 'application/json' },
+      async (): Promise<ReadResourceResult> => {
+        try {
+          // GraphQL introspection query to get the full schema
+          const introspectionQuery = `
+            query IntrospectionQuery {
+              __schema {
+                types {
+                  name
+                  kind
+                  description
+                  fields {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                      ofType {
+                        name
+                        kind
+                      }
+                    }
+                    args {
+                      name
+                      description
+                      type {
+                        name
+                        kind
+                        ofType {
+                          name
+                          kind
+                        }
+                      }
+                    }
+                  }
+                  inputFields {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                      ofType {
+                        name
+                        kind
+                      }
+                    }
+                  }
+                  interfaces {
+                    name
+                    kind
+                  }
+                  enumValues {
+                    name
+                    description
+                  }
+                  possibleTypes {
+                    name
+                    kind
+                  }
+                }
+                queryType {
+                  name
+                }
+                mutationType {
+                  name
+                }
+                subscriptionType {
+                  name
+                }
+                directives {
+                  name
+                  description
+                  locations
+                  args {
+                    name
+                    description
+                    type {
+                      name
+                      kind
+                    }
+                  }
+                }
+              }
+            }
+          `;
+
+          const schemaData = await graphqlClient.query(introspectionQuery);
+
+          return {
+            contents: [
+              {
+                uri: 'tally://api/schema',
+                mimeType: 'application/json',
+                text: JSON.stringify({
+                  description: 'Tally GraphQL API Schema',
+                  timestamp: new Date().toISOString(),
+                  schema: schemaData,
+                }, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          // If introspection fails, return basic schema information
+          return {
+            contents: [
+              {
+                uri: 'tally://api/schema',
+                mimeType: 'application/json',
+                text: JSON.stringify({
+                  description: 'Tally GraphQL API Schema (Basic Info)',
+                  timestamp: new Date().toISOString(),
+                  error: `Schema introspection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  endpoint: graphqlClient.getEndpoint(),
+                  note: 'Use the execute_graphql_query tool to run custom queries against this API',
+                }, null, 2),
+              },
+            ],
+          };
+        }
       }
     );
   }
