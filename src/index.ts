@@ -60,7 +60,7 @@ class TallyMcpServer {
     this.server = new McpServer(
       {
         name: 'mcp-tally-api',
-        version: '1.0.0',
+        version: '1.1.0',
       },
       {
         capabilities: {
@@ -102,7 +102,7 @@ class TallyMcpServer {
               text: JSON.stringify(
                 {
                   name: 'mcp-tally-api',
-                  version: '1.0.0',
+                  version: '1.1.0',
                   transport: TRANSPORT_MODE,
                   tally_api_url: TALLY_API_URL,
                   api_key_configured: !!TALLY_API_KEY,
@@ -957,7 +957,7 @@ class TallyMcpServer {
               text: JSON.stringify(
                 {
                   name: 'mcp-tally-api',
-                  version: '1.0.0',
+                  version: '1.1.0',
                   description: 'MCP server for Tally blockchain governance API',
                   status: 'operational',
                   timestamp: new Date().toISOString(),
@@ -1304,7 +1304,7 @@ class TallyMcpServer {
         const server = new McpServer(
           {
             name: 'mcp-tally-api',
-            version: '1.0.0',
+            version: '1.1.0',
           },
           {
             capabilities: {
@@ -1409,7 +1409,7 @@ class TallyMcpServer {
               text: JSON.stringify(
                 {
                   name: 'mcp-tally-api',
-                  version: '1.0.0',
+                  version: '1.1.0',
                   transport: TRANSPORT_MODE,
                   tally_api_url: TALLY_API_URL,
                   api_key_configured: !!TALLY_API_KEY,
@@ -1581,7 +1581,7 @@ class TallyMcpServer {
               text: JSON.stringify(
                 {
                   name: 'mcp-tally-api',
-                  version: '1.0.0',
+                  version: '1.1.0',
                   description: 'MCP server for Tally blockchain governance API',
                   status: 'operational',
                   timestamp: new Date().toISOString(),
