@@ -1,0 +1,20 @@
+name: mcp-tally-api
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: withtally/mcp-tally-api
+    branch: main
+  run_command: npm run deploy:start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: TRANSPORT_MODE
+    value: http
+  - key: PORT
+    value: "8080"
+  - key: TALLY_API_KEY
+    value: "${TALLY_API_KEY}"
+    type: SECRET
+  http_port: 8080 

@@ -24,7 +24,9 @@
     "lint": "prettier --check .",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write .",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "deploy:build": "bun run build && npm test",
+    "deploy:start": "TRANSPORT_MODE=http node dist/index.js"
   },
   "files": [
     "dist/",
